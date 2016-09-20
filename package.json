@@ -12,6 +12,7 @@
   "dependencies": {
     "express": "^4.14.0",
     "expressworks": "^3.3.3",
+    "mongodb": "^2.2.10",
     "path": "^0.12.7"
   }
 }

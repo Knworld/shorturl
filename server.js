@@ -24,51 +24,41 @@ app.get(/short\/(.+)/, function(req, res){
         obj.error = "The provided paramter is not a valid url";
         return res.json(obj);
     }
+
     
     obj["original_url"] = url;
     
         accessDb(url, function(err, col){
            if(err) throw err;
+           
            col.find().toArray(function(err, data){
+               //console.log('showdata',data);
+           });
+           
+           col.find({'url':url}).toArray(function(err, data){
             if(err) throw err;
-      
-            for(var i=0; i<data.length; i++){
-                  var item = data[i];
-                  console.log(item);
-                  if(item['key'] && (item['key'][Object.keys(item['key'])[0]] === url)) {
-                      obj["short_url"] = baseUrl + Object.keys(item['key'])[0];
-                      //res.json(obj);
-                      console.log('value foundddddddddddddddddd');
-                      break;
-                  }
-            }
-            
             
             //if url does not exist in database
-            if(!obj["short_url"]){
+            if(data.length){
+                console.log('found', data[0]['key']);
+                obj["short_url"] = baseUrl + data[0]['key'];
+            }else{
                 code = codeGen(digit, '');
-                console.log("code_part1", code);
+                
                 var count = 0;
                 var keyObj = {};
                
                if(code === null) {  obj["short_url"] = "Maximum storage reached";}
                else {
+                   console.log("code_part1", code);
                    obj["short_url"] = baseUrl + code;
-                  //var subObj = {};
-                   //subObj[code] = url;
-                   keyObj['key'] = code;
-                   keyObj['url'] = url;
-                   col.insert(keyObj);
-                   
+                   col.insert({key:code, url:url});
                }
                
             }
             
             return res.json(obj);
             
-       
-       
-        
             });
             
         });
@@ -86,26 +76,27 @@ app.get('/short/', function(req, res){
 app.get('/:short_url', function(req, res){
     var short_url = req.params.short_url;
     var resObj = {};
-    
+    console.log('getkey', short_url);
     accessDb(short_url, function(err, col){
         if(err) throw err;
-        col.find().toArray(function(err, data){
-            var thisUrl;
+        col.findOne({'key':short_url}, function(err,data){
+            //var thisUrl;
             if(err) throw err;
             
+            /*
             data.forEach(function(item){
                 if(item['key'] && Object.keys(item['key'])[0] === short_url){
                     thisUrl = item['key'][Object.keys(item['key'])[0]];
                    return;
                 }
-            });
+            });*/
             
-            if(!thisUrl) {
+            if(!data) {
                 resObj.error = "the url does not exist";
                 return res.json(resObj);
             }
             
-            return res.redirect(thisUrl);
+            return res.redirect(data['url']);
         });
         
     });
