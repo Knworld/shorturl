@@ -17,7 +17,7 @@ app.get(/short\/(.+)/, function(req, res){
     var code;
     var url = req.params[0];
     var baseUrl = req.protocol + 's://' + req.get('Host') + '/';
-    var ptn = /^((http|https):\/\/(www\.|)[a-z]+\.([a-z]{3}\/[\w\/]*|[a-z]{3}))$/;
+    var ptn = /^((http|https):\/\/(www\.|)[a-z0-9]+\.([a-z]{3}\/[\w\/]*|[a-z]{3}))$/;
     if(!ptn.test(url)) {
         obj.error = "The provided paramter is not a valid url";
         return res.json(obj);
@@ -28,11 +28,6 @@ app.get(/short\/(.+)/, function(req, res){
     
     accessDb(function(err, db, col){
            if(err) throw err;
-           
-           //col.find().toArray(function(err, data){
-               //if(err) throw err;
-               //console.log('showdata',data);
-           //});
        
           findUrl(url, function(err, data){
              if(err) throw err;
@@ -68,50 +63,25 @@ app.get(/short\/(.+)/, function(req, res){
               
             function findKey(callback){
               
-              var newKey = codeGen(digit, "");
-              col.findOne({key: newKey}, function(err, data){
-                  if(err) throw err;
-                  //if(!data) return findKey(callback);
-                  //else callback(newKey);
-                  console.log('keygen', newKey);
-                  callback(newKey);
-              });
+              function keyLoop(innerCallback){
+              
+                  var newKey = codeGen(digit, "");
+                  col.findOne({key: newKey}, function(err, data){
+                      console.log('keygen', newKey);
+                      if(err) throw err;
+                      //if(!data) return findKey(callback);
+                      //else callback(newKey);
+                      innerCallback(newKey, data);
+                  });
+              }
+              
+              keyLoop(function callb(newKey, data){
+                  if(data) return keyLoop(callb);
+                  else return callback(newKey);
+              })
             }
 
-           
-           /*
-           col.find({'url':url}).toArray(function(err, data){
-             
-            if(err) throw err;
-           
-            //if url does not exist in database
-            if(data.length){
-                //console.log('found', data[0]['key']);
-                obj["short_url"] = baseUrl + data[0]['key'];
-            }else{
-                code = codeGen(digit, '');
-                
-                var count = 0;
-                var keyObj = {};
-               
-               if(code === null) {  obj["short_url"] = "Maximum storage reached";}
-               else {
-                   console.log("code_part1", code);
-                   obj["short_url"] = baseUrl + code;
-                   col.insert({key:code, url:url});
-                   //insertData(col, code, url);
-               }
-               
-            }
-            
-            return res.json(obj);
-            
-            });*/
-            
     });
-   
-    
-  
    
 });
 
@@ -124,13 +94,12 @@ app.get('/:short_url', function(req, res){
     var short_url = req.params.short_url;
     var resObj = {};
     console.log('getkey', short_url);
-    accessDb(short_url, function(err, col){
+    accessDb(function(err, db, col){
         if(err) throw err;
         col.findOne({'key':short_url}, function(err,data){
             //var thisUrl;
             if(err) throw err;
-            
-            
+          
             if(!data) {
                 resObj.error = "the url does not exist";
                 return res.json(resObj);
@@ -141,7 +110,6 @@ app.get('/:short_url', function(req, res){
         
     });
     
-   
 });
 
 app.listen(process.env.PORT || 8080, function(){});
