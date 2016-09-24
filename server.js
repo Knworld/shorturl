@@ -2,10 +2,13 @@ var express = require('express');
 var mongo = require('mongodb').MongoClient;
 var path = require('path');
 var localdb = "mongodb://localhost:27017/mydb";
+//read db path from env var
 var url_db = process.env.DB_URI || localdb;
 var app = express();
 var resObj = {};
 var digit = 10;
+
+//key char pool.
 var pool = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 app.get('/', function(req, res){
@@ -17,15 +20,17 @@ app.get(/short\/(.+)/, function(req, res){
     var code;
     var url = req.params[0];
     var baseUrl = req.protocol + 's://' + req.get('Host') + '/';
+    
+    //url matching pattern
     var ptn = /^((http|https):\/\/(www\.|)[a-z0-9]+\.([a-z]{3}\/[\w\/]*|[a-z]{3}))$/;
     if(!ptn.test(url)) {
         obj.error = "The provided paramter is not a valid url";
         return res.json(obj);
     }
 
-    //console.log('variable', url_db);
     obj["original_url"] = url;
     
+    //access db. 
     accessDb(function(err, db, col){
            if(err) throw err;
        
@@ -46,7 +51,7 @@ app.get(/short\/(.+)/, function(req, res){
              }
                  
           });
-              
+            //First find url, if exist, return key associated to url.
             function findUrl(searchUrl, callback){
                 
               col.findOne({'url': searchUrl}, function(err, data){
@@ -60,7 +65,8 @@ app.get(/short\/(.+)/, function(req, res){
               });
                   
             }
-              
+            
+            //Else generate key then check if key already exist. If it does, generate new key until no match is found.
             function findKey(callback){
               
               function keyLoop(innerCallback){
@@ -70,7 +76,7 @@ app.get(/short\/(.+)/, function(req, res){
                       console.log('keygen', newKey);
                       if(err) throw err;
                       //if(!data) return findKey(callback);
-                      //else callback(newKey);
+                      //else innerCallback(newKey);
                       innerCallback(newKey, data);
                   });
               }
